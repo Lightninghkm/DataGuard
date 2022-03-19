@@ -1,0 +1,17 @@
+module kernel {
+	rpc void test1(  )	{
+		projection < struct st > ss {
+ 			projection struct st  *st;
+		}
+
+		projection < struct st > ss {
+ 			array<u32, 10>  f1;
+		}
+
+	}
+
+	rpc void test2( array<u32*, 2> *s, u32 len )	{
+	}
+
+
+}

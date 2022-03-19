@@ -1,0 +1,9 @@
+module kernel {
+	projection < struct bar_foo> bar_foo {
+ 	}
+
+	rpc void foo( void* data );
+
+	rpc int main(  );
+
+}

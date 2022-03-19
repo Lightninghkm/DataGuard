@@ -1,0 +1,10 @@
+module kernel {
+rpc_ptr void ( int sz ) {
+}
+rpc int encrypt( char* plaintext, int sz ) {
+}
+rpc int main(  ) {
+}
+
+
+}

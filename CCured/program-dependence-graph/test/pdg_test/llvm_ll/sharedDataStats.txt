@@ -1,0 +1,6 @@
+shared data stats: 
+number of shared data types: 0
+Concurrently Executed Fields: 0
+total number of fields: 0
+number of projected fields found by basic algorithm: 0
+number of projected fields with shared data optimziation: 0

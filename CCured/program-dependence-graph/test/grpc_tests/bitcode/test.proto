@@ -1,0 +1,26 @@
+syntax = "proto3"service Service {
+	rpc initkey(initkeyRequest)returns (initkeyResponse){}
+	rpc encrypt(encryptRequest)returns (encryptResponse){}
+	rpc main(mainRequest)returns (mainResponse){}
+}
+message initkeyResponse { 
+	
+}
+message initkeyRequest {
+ 	int sz = 1;
+}
+
+message encryptResponse { 
+	int = 1
+}
+message encryptRequest {
+ 	char* plaintext = 1;
+	int sz = 2;
+}
+
+message mainResponse { 
+	int = 1
+}
+message mainRequest {
+ }
+

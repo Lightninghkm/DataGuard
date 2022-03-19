@@ -1,0 +1,3 @@
+[submodule "SymbolicExecution"]
+	path = SymbolicExecution
+	url = https://github.com/S2E/s2e.git

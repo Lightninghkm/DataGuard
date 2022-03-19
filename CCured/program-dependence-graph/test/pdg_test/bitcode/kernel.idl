@@ -1,0 +1,13 @@
+module kernel {
+	rpc void PrintClothesColor( projection person_t  alloc[callee] *pp ) {
+		projection < struct person_t > pp {
+ 		}
+	}
+
+	rpc projection ret_person_t* [alloc(caller)] ReturnNewObj(  ) {
+		projection < struct person_t > ret_person_t {
+ 		}
+	}
+
+
+}

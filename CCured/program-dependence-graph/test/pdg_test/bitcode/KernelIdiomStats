@@ -1,0 +1,8 @@
+num of union type data: 0
+num of void pointer/unhandled: 0[0]
+num of unsafe type cast: 0
+num of sential array: 0
+num of array: 1
+num of string: 0
+Driver to Kernel Invocation: 0
+Kernel to Driver Invocation: 2
