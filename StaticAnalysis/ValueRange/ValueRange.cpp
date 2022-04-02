@@ -422,7 +422,7 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
             		auto index = inst->getOperand(1);
 					auto constant = dyn_cast<ConstantInt>(index);
 					if (constant) {
-						//outs() << "Index is constant!" << '\n';
+						//errs() << "Index is constant!" << '\n';
 						if (!constant->isNegative()) {
 						//if (!constant->isNegative() && !constant->uge(size)) {
 						    // print context
@@ -438,19 +438,19 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 				            }
 				        }
 		                if (inst->getDebugLoc()){
-		                	outs() << "Definition Site: ";
+		                	errs() << "Definition Site: ";
 		                	inst->getDebugLoc().print(errs());
-		                	outs() << ", ";
+		                	errs() << ", ";
 		                }
 			            // print fn name
 			            errs() << "In Func: " << function->getName().str() << ", ";
 			            //print line
 	                    if (inst->getDebugLoc())
-	                    	outs() << "At Line: " << inst->getDebugLoc().getLine();
+	                    	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
 	                    else
-	                    	outs() << "Dbg info corrupted!\n";
+	                    	errs() << "Dbg info corrupted!\n";
 			            //print buf bytes
-			            errs() << "\n" << "Declared Size: Undetermined due to parameter passing" << ", ";
+			            errs() << "Declared Size: Not Specified!" << ", ";
 			            //print indices
 			            //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
 			            errs() << "Access Range: " << (int64_t) constant->getValue().getLimitedValue()<< '\n';
@@ -468,29 +468,30 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 			                }
 			            }
 		                if (inst->getDebugLoc()){
-		                	outs() << "Definition Site: ";
+		                	errs() << "Definition Site: ";
 		                	inst->getDebugLoc().print(errs());
-		                	outs() << ", ";
+		                	errs() << ", ";
 		                }
 			            // print fn name
 			            errs() << "In Func: " << function->getName().str() << ", ";
 			            //print line
 	                    if (inst->getDebugLoc())
-	                    	outs() << "At Line: " << inst->getDebugLoc().getLine();
+	                    	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
 	                    else
-	                    	outs() << "Dbg info corrupted!\n";
+	                    	errs() << "Dbg info corrupted!\n";
 			            //print buf bytes
-			            errs() << "\n" << "Declared Size: Undetermined due to parameter passing" << ", ";
+			            errs() << "Declared Size: Not Specified!" << ", ";
 			            //print indices
 			            //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
-			            errs() << "Access Range: Undetermined!\n";
+			            errs() << "Access Range cannot be determined " << "since GEP has non-constant offset operand!\n";
 		            	errs() << "Classify this pointer as unsafe!\n";
 					}
 			    }
 	            
 	            
 	            if(arrayTy){
-	                errs() << '\n' << "This is an array!" << '\n';
+	                //errs() << '\n' << "This is an array!" << '\n';
+	                errs() << '\n';
 					auto size = arrayTy->getNumElements();
 					auto elmtTy = arrayTy->getElementType();
 					auto &layout = M->getDataLayout();
@@ -520,19 +521,19 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 			                }
 			                // print file name
 			                if (inst->getDebugLoc()){
-			                	outs() << "Definition Site: ";
+			                	errs() << "Definition Site: ";
 			                	inst->getDebugLoc().print(errs());
-			                	outs() << ", ";
+			                	errs() << ", ";
 			                }
 			                // print fn name
 			                errs() << "In Func: " << function->getName().str() << ", ";
 			                //print line
 			                if (inst->getDebugLoc())
-			                	outs() << "At Line: " << inst->getDebugLoc().getLine();
+			                	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
 			                else
-			                	outs() << "Dbg info corrupted!\n";
+			                	errs() << "Dbg info corrupted!\n";
 			                //print buf bytes
-			                errs() << "\n" << "Declared Size: " << numBytes << ", ";
+			                errs() << "Declared Size: " << numBytes << ", ";
 			                //print indices
 			                //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
 			                errs() << "Access Range: " << (int64_t) constant->getValue().getLimitedValue() * elmtBytes << '\n';
@@ -567,22 +568,21 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 			                }
 			                // print file name
 			                if (inst->getDebugLoc()){
-			                	outs() << "Definition Site: ";
+			                	errs() << "Definition Site: ";
 			                	inst->getDebugLoc().print(errs());
-			                	outs() << ", ";
+			                	errs() << ", ";
 			                }
 			                // print fn name
 			                errs() << "In Func: " << function->getName().str() << ", ";
 			                //print line
 				            if (inst->getDebugLoc())
-				            	outs() << "At Line: " << inst->getDebugLoc().getLine();
+				            	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
 				            else
-				            	outs() << "Dbg info corrupted!\n";
+				            	errs() << "Dbg info corrupted!\n";
 			                //print buf bytes
-			                errs() << "\n" << "Declared Size: " << numBytes << ", ";
+			                errs() << "Declared Size: " << numBytes << ", ";
 					        if (rangeValue.isInfinity() || rangeValue.isUnknown()) {
-					            errs() << "Access Range: " << "Undetermined!\n";
-					            errs() << "GEP has non-constant offset operand!" << '\n';
+					            errs() << "Access Range cannot be determined " << "since GEP has non-constant offset operand!\n";
 					            errs() << "Classify this array as unsafe!\n";
 					        }
 					        else {
@@ -595,7 +595,8 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 				}
 	        
 	            if(structTy){
-			        errs() << '\n'  << "This is a structure!" << '\n';
+			        //errs() << '\n'  << "This is a structure!" << '\n';
+			        errs() << '\n';
 			        //std::string instPrint;
 			        //llvm::raw_string_ostream rso(instPrint);
 			        //inst->print(rso);
@@ -639,19 +640,19 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 						        }
 						        // print file name
 						        if (inst->getDebugLoc()){
-						        	outs() << "Definition Site: ";
+						        	errs() << "Definition Site: ";
 						        	inst->getDebugLoc().print(errs());
-						        	outs() << ", ";
+						        	errs() << ", ";
 						        }
 						        // print fn name
 						        errs() << "In Func: " << function->getName().str() << ", ";
 						        //print line
 							    if (inst->getDebugLoc())
-							    	outs() << "At Line: " << inst->getDebugLoc().getLine();
+							    	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
 							    else
-							    	outs() << "Dbg info corrupted!\n";
+							    	errs() << "Dbg info corrupted!\n";
 						        //print buf bytes
-						        errs() << "\n" << "Declared Size: " << numBytes << ", ";
+						        errs() << "Declared Size: " << numBytes << ", ";
 						        //print indices
 						        //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
 						        errs() << "Access Range: " << offset << '\n';
@@ -680,22 +681,22 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 					            }
 					        }
 					        if (inst->getDebugLoc()){
-					        	outs() << "Definition Site: ";
+					        	errs() << "Definition Site: ";
 					        	inst->getDebugLoc().print(errs());
-					        	outs() << ", ";
+					        	errs() << ", ";
 					        }
 					        // print fn name
 					        errs() << "In Func: " << function->getName().str() << ", ";
 					        //print line
 						    if (inst->getDebugLoc())
-						    	outs() << "At Line: " << inst->getDebugLoc().getLine();
+						    	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
 						    else
-						    	outs() << "Dbg info corrupted!\n";
+						    	errs() << "Dbg info corrupted!\n";
 					        //print buf bytes
-					        errs() << "\n" << "Declared Size: " << numBytes << ", ";
+					        errs() << "Declared Size: " << numBytes << ", ";
 					        //print indices
 					        //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
-					        errs() << "Access Range: Undetermined!\n";
+					        errs() << "Access Range is corrupted since the index is corrupted!\n";
 					        errs() << "Classify this structure as unsafe!\n";
 						}
 					}
@@ -724,22 +725,21 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 					        }
 					        // print file name
 					        if (inst->getDebugLoc()){
-					        	outs() << "Definition Site: ";
+					        	errs() << "Definition Site: ";
 					        	inst->getDebugLoc().print(errs());
-					        	outs() << ", ";
+					        	errs() << ", ";
 					        }
 					        // print fn name
 					        errs() << "In Func: " << function->getName().str() << ", ";
 					        //print line
 					        if (inst->getDebugLoc())
-					        	outs() << "At Line: " << inst->getDebugLoc().getLine();
+					        	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
 					        else
-					        	outs() << "Dbg info corrupted!\n";
+					        	errs() << "Dbg info corrupted!\n";
 					        //print buf bytes
-					        errs() << "\n" << "Declared Size: " << numBytes << ", ";
+					        errs() << "Declared Size: " << numBytes << ", ";
 					        if (rangeValue.isInfinity() || rangeValue.isUnknown()) {
-					            errs() << "Access Range: " << "Undetermined!\n";
-					            errs() << "GEP has non-constant offset operand!" << '\n';
+					            errs() << "Access Range cannot be determined " << "since GEP has non-constant offset operand!\n";
 					            errs() << "Classify this structure as unsafe!\n";
 					        }
 						}
