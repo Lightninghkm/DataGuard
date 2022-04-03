@@ -406,10 +406,8 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
         for (auto & [function, rangeStates] : contextResults) {
             for (auto &valueStatePair : rangeStates) {
                 auto *inst = llvm::dyn_cast<llvm::GetElementPtrInst>(valueStatePair.first);
-                if (!inst) {
-                    //errs() << "INST is NULL!" << '\n';
+                if (!inst) 
                     continue;
-                }
                 errs() << '\n' << *inst ;
 	            auto &state = analysis::getIncomingState(rangeStates, *inst);
 	            Type *type = cast<PointerType>(
@@ -419,78 +417,32 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 	            
 	            if(!arrayTy && !structTy){
             		errs() << "\nThis is a pointer to type: "<< *type << '\n';
-            		auto index = inst->getOperand(1);
-					auto constant = dyn_cast<ConstantInt>(index);
-					if (constant) {
-						//errs() << "Index is constant!" << '\n';
-						if (!constant->isNegative()) {
-						//if (!constant->isNegative() && !constant->uge(size)) {
-						    // print context
-						    for (Instruction *c_instr: ctxt) {
-				                if ((c_instr) && (c_instr->getDebugLoc())) {
-				                		errs() << "Call Site: ";
-				                		errs() << *c_instr << '\n';
-				                		//TODO: Call site rewrited by NesCheck, print instruction instead
-				                        //c_instr->getDebugLoc().print(errs());
-				                        //errs() << "\n";
-				                    
-				                }
-				            }
-				        }
-		                if (inst->getDebugLoc()){
-		                	errs() << "Definition Site: ";
-		                	inst->getDebugLoc().print(errs());
-		                	errs() << ", ";
-		                }
-			            // print fn name
-			            errs() << "In Func: " << function->getName().str() << ", ";
-			            //print line
-	                    if (inst->getDebugLoc())
-	                    	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
-	                    else
-	                    	errs() << "Dbg info corrupted!\n";
-			            //print buf bytes
-			            errs() << "Declared Size: Not Specified!" << ", ";
-			            //print indices
-			            //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
-			            errs() << "Access Range: " << (int64_t) constant->getValue().getLimitedValue()<< '\n';
-		            	errs() << "Classify this pointer as unsafe!\n";
+					// print context
+					for (Instruction *c_instr: ctxt) {
+						if ((c_instr) && (c_instr->getDebugLoc())) {
+								errs() << "Call Site: ";
+								errs() << *c_instr << '\n';
+								//TODO: Call site rewrited by NesCheck, print instruction instead
+								//c_instr->getDebugLoc().print(errs());
+								//errs() << "\n";
+						}
 					}
-					else{
-						for (Instruction *c_instr: ctxt) {
-			                if ((c_instr) && (c_instr->getDebugLoc())) {
-			                		errs() << "Call Site: ";
-			                		errs() << *c_instr << '\n';
-			                		//TODO: Call site rewrited by NesCheck, print instruction instead
-			                        //c_instr->getDebugLoc().print(errs());
-			                        //errs() << "\n";
-			                    
-			                }
-			            }
-		                if (inst->getDebugLoc()){
-		                	errs() << "Definition Site: ";
-		                	inst->getDebugLoc().print(errs());
-		                	errs() << ", ";
-		                }
-			            // print fn name
-			            errs() << "In Func: " << function->getName().str() << ", ";
-			            //print line
-	                    if (inst->getDebugLoc())
-	                    	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
-	                    else
-	                    	errs() << "Dbg info corrupted!\n";
-			            //print buf bytes
-			            errs() << "Declared Size: Not Specified!" << ", ";
-			            //print indices
-			            //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
-			            errs() << "Access Range cannot be determined " << "since GEP has non-constant offset operand!\n";
-		            	errs() << "Classify this pointer as unsafe!\n";
+					if (inst->getDebugLoc()){
+						errs() << "Definition Site: ";
+						inst->getDebugLoc().print(errs());
+						errs() << ", ";
 					}
+					// print fn name
+					errs() << "In Func: " << function->getName().str() << ", ";
+					//print line
+					if (inst->getDebugLoc())
+						errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
+					else
+						errs() << "Dbg info corrupted!\n";
+					errs() << "Classify this pointer as safe!\n";
 			    }
-	            
-	            
+	           	            
 	            if(arrayTy){
-	                //errs() << '\n' << "This is an array!" << '\n';
 	                errs() << '\n';
 					auto size = arrayTy->getNumElements();
 					auto elmtTy = arrayTy->getElementType();
@@ -500,7 +452,6 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 					auto index = inst->getOperand(2);
 					auto constant = dyn_cast<ConstantInt>(index);
 					if (constant) {
-					    //errs() << "Index is constant!" << '\n';
 					    if (!constant->isNegative() && !constant->uge(size)) {
 					        // print context
 					        bool first = true;
@@ -535,7 +486,6 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 			                //print buf bytes
 			                errs() << "Declared Size: " << numBytes << ", ";
 			                //print indices
-			                //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
 			                errs() << "Access Range: " << (int64_t) constant->getValue().getLimitedValue() * elmtBytes << '\n';
 			                if (numBytes >= ((int64_t) constant->getValue().getLimitedValue() * elmtBytes))
 			                	errs() << "Classify this array as safe!\n";
@@ -582,7 +532,7 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 			                //print buf bytes
 			                errs() << "Declared Size: " << numBytes << ", ";
 					        if (rangeValue.isInfinity() || rangeValue.isUnknown()) {
-					            errs() << "Access Range cannot be determined " << "since GEP has non-constant offset operand!\n";
+					            errs() << "Access Range cannot be determined since GEP has non-constant offset operand!\n";
 					            errs() << "Classify this array as unsafe!\n";
 					        }
 					        else {
@@ -595,17 +545,10 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 				}
 	        
 	            if(structTy){
-			        //errs() << '\n'  << "This is a structure!" << '\n';
 			        errs() << '\n';
-			        //std::string instPrint;
-			        //llvm::raw_string_ostream rso(instPrint);
-			        //inst->print(rso);
-			        //errs() << "INST:" << rso.str() << "\n";
 			        auto size = structTy->getNumElements();
-			        //auto elmtTy = structTy->getElementType();
 			        auto &layout = M->getDataLayout();
 			        auto numBytes = layout.getTypeAllocSize(structTy);
-			        //auto elmtBytes = layout.getTypeAllocSize(elmtTy);
 			        llvm::Value* index;
 			        if(inst->getNumOperands() > 2){
 			            index = inst->getOperand(2);
@@ -617,9 +560,8 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 			        auto constant = dyn_cast<ConstantInt>(index);
 			        if(constant){
 				    	auto intIndex = constant->getValue().getLimitedValue();
-				    	if(intIndex < 100000){
+				    	if(intIndex < size){
 							auto offset = structureLayout->getElementOffset(intIndex);
-						    //errs() << "Index is constant!" << '\n';
 						    if (!constant->isNegative() && !constant->uge(size)) {
 						        // print context
 						        bool first = true;
@@ -653,8 +595,6 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 							    	errs() << "Dbg info corrupted!\n";
 						        //print buf bytes
 						        errs() << "Declared Size: " << numBytes << ", ";
-						        //print indices
-						        //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
 						        errs() << "Access Range: " << offset << '\n';
 						        if (numBytes >= offset)
 						        	errs() << "Classify this structure as safe!\n";
@@ -694,8 +634,6 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
 						    	errs() << "Dbg info corrupted!\n";
 					        //print buf bytes
 					        errs() << "Declared Size: " << numBytes << ", ";
-					        //print indices
-					        //auto x = (int64_t) constant->getValue().getLimitedValue();// * elmtBytes;
 					        errs() << "Access Range is corrupted since the index is corrupted!\n";
 					        errs() << "Classify this structure as unsafe!\n";
 						}
