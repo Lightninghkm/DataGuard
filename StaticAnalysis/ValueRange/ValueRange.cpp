@@ -355,42 +355,40 @@ debugPrint(RangeResult &rangeStates) {
 }
 
 bool queryAliasing(Value* v1, Value* v2)
-	{
-	  if (!v1->getType()->isPointerTy() || !v2->getType()->isPointerTy()){
-	  	errs() << "Not a Pointer!" << '\n';
-		return false;
-	  }
-	  // check bit cast
-	  if (BitCastInst *bci = dyn_cast<BitCastInst>(v1))
-	  {
-		if (bci->getOperand(0) == v2)
-		  return true;
-	  }
-	  // handle load instruction  
-	  if (LoadInst* li = dyn_cast<LoadInst>(v1))
-	  {
-		auto load_addr = li->getPointerOperand();
-		for (auto user : load_addr->users())
-		{
-		  if (isa<LoadInst>(user))
-		  {
-		    if (user == v2)
-		      return true;
-		  }
-		  if (StoreInst *si = dyn_cast<StoreInst>(user))
-		  {
-		    if (si->getPointerOperand() == load_addr)
-		    {
-		      if (si->getValueOperand() == v2)
-		        return true;
-		    }
-		  }
-		}
-	  }
-	}
+{
+    if (!v1->getType()->isPointerTy() || !v2->getType()->isPointerTy()){
+        errs() << "Not a Pointer!" << '\n';
+        return false;
+    }
+    // check bit cast
+    if (BitCastInst *bci = dyn_cast<BitCastInst>(v1))
+    {
+        if (bci->getOperand(0) == v2)
+            return true;
+    }
+    // handle load instruction  
+    if (LoadInst* li = dyn_cast<LoadInst>(v1))
+    {
+        auto load_addr = li->getPointerOperand();
+        for (auto user : load_addr->users()){
+            if (isa<LoadInst>(user)){
+                if (user == v2)
+                    return true;
+            }
+            if (StoreInst *si = dyn_cast<StoreInst>(user)){
+                if (si->getPointerOperand() == load_addr){
+                    if (si->getValueOperand() == v2)
+                        return true;
+                }
+            }
+        }
+    }
+}
 
 void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
-	auto *mainFunction = M->getFunction("main_nesCheck");
+    errs() << "Computing Value Range" << '\n';
+    std::set <llvm::Instruction *> unsafePtr;
+    auto *mainFunction = M->getFunction("main_nesCheck");
     if (!mainFunction) {
         llvm::report_fatal_error("Unable to find main function.");
     }
@@ -409,281 +407,306 @@ void valueRangeAnalysis(Module *M, std::set<Value*> stackSeqPointerSet){
                 if (!inst) 
                     continue;
                 errs() << '\n' << *inst ;
-	            auto &state = analysis::getIncomingState(rangeStates, *inst);
-	            Type *type = cast<PointerType>(
-	                    cast<GetElementPtrInst>(inst)->getPointerOperandType())->getElementType();		            
-	            auto arrayTy = dyn_cast_or_null<ArrayType>(type);
-	            auto structTy = dyn_cast_or_null<StructType>(type);
-	            
-	            if(!arrayTy && !structTy){
-            		errs() << "\nThis is a pointer to type: "<< *type << '\n';
-					// print context
-					for (Instruction *c_instr: ctxt) {
-						if ((c_instr) && (c_instr->getDebugLoc())) {
-								errs() << "Call Site: ";
-								errs() << *c_instr << '\n';
-								//TODO: Call site rewrited by NesCheck, print instruction instead
-								//c_instr->getDebugLoc().print(errs());
-								//errs() << "\n";
-						}
-					}
-					if (inst->getDebugLoc()){
-						errs() << "Definition Site: ";
-						inst->getDebugLoc().print(errs());
-						errs() << ", ";
-					}
-					// print fn name
-					errs() << "In Func: " << function->getName().str() << ", ";
-					//print line
-					if (inst->getDebugLoc())
-						errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
-					else
-						errs() << "Dbg info corrupted!\n";
-					errs() << "Classify this pointer as safe!\n";
-			    }
-	           	            
-	            if(arrayTy){
-	                errs() << '\n';
-					auto size = arrayTy->getNumElements();
-					auto elmtTy = arrayTy->getElementType();
-					auto &layout = M->getDataLayout();
-					auto numBytes = layout.getTypeAllocSize(arrayTy);
-					auto elmtBytes = layout.getTypeAllocSize(elmtTy);
-					auto index = inst->getOperand(2);
-					auto constant = dyn_cast<ConstantInt>(index);
-					if (constant) {
-					    if (!constant->isNegative() && !constant->uge(size)) {
-					        // print context
-					        bool first = true;
-					        for (Instruction *c_instr: ctxt) {
-			                    if ((c_instr) && (c_instr->getDebugLoc())) {               		                                                                                    
-			                        if (first) {
-			                            first = false;
-			                            errs() << "Direct Use Site: ";
-			                            c_instr->getDebugLoc().print(errs());
-			                            errs() << "\n";
-			                        }
-			                        else {
-			                            errs() << "Indirect Use Site: ";
-			                            c_instr->getDebugLoc().print(errs());
-			                            errs() << "\n";
-			                        }
-			                    }
-			                }
-			                // print file name
-			                if (inst->getDebugLoc()){
-			                	errs() << "Definition Site: ";
-			                	inst->getDebugLoc().print(errs());
-			                	errs() << ", ";
-			                }
-			                // print fn name
-			                errs() << "In Func: " << function->getName().str() << ", ";
-			                //print line
-			                if (inst->getDebugLoc())
-			                	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
-			                else
-			                	errs() << "Dbg info corrupted!\n";
-			                //print buf bytes
-			                errs() << "Declared Size: " << numBytes << ", ";
-			                //print indices
-			                errs() << "Access Range: " << (int64_t) constant->getValue().getLimitedValue() * elmtBytes << '\n';
-			                if (numBytes >= ((int64_t) constant->getValue().getLimitedValue() * elmtBytes))
-			                	errs() << "Classify this array as safe!\n";
-			                else
-			                	errs() << "Classify this array as unsafe!\n";
-					    }
-					}
-					else {
-					    auto &rangeValue = state[index];
-					    if (rangeValue.isUnknown() ||
-					        rangeValue.isInfinity() ||
-					        rangeValue.lvalue->isNegative() ||
-					        rangeValue.rvalue->uge(size)) {
-					        // print context
-					        bool first = true;
-					        for (Instruction *c_instr: ctxt) {
-			                    if ((c_instr) && (c_instr->getDebugLoc())) {		          		                                                                                    
-			                        if (first) {
-			                            first = false;
-			                            errs() << "Direct Use Site: ";
-			                            c_instr->getDebugLoc().print(errs());
-			                            errs() << "\n";
-			                        }
-			                        else {
-			                            errs() << "Indirect Use Site: ";
-			                            c_instr->getDebugLoc().print(errs());
-			                            errs() << "\n";
-			                        }
-			                    }
-			                }
-			                // print file name
-			                if (inst->getDebugLoc()){
-			                	errs() << "Definition Site: ";
-			                	inst->getDebugLoc().print(errs());
-			                	errs() << ", ";
-			                }
-			                // print fn name
-			                errs() << "In Func: " << function->getName().str() << ", ";
-			                //print line
-				            if (inst->getDebugLoc())
-				            	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
-				            else
-				            	errs() << "Dbg info corrupted!\n";
-			                //print buf bytes
-			                errs() << "Declared Size: " << numBytes << ", ";
-					        if (rangeValue.isInfinity() || rangeValue.isUnknown()) {
-					            errs() << "Access Range cannot be determined since GEP has non-constant offset operand!\n";
-					            errs() << "Classify this array as unsafe!\n";
-					        }
-					        else {
-					            auto l = (int64_t) rangeValue.lvalue->getLimitedValue();
-					            auto r = (int64_t) rangeValue.rvalue->getLimitedValue();
-					            errs() << l * (int64_t) elmtBytes << ':' << r * (int64_t) elmtBytes << '\n';
-					        }
-					    }
-					}
-				}
-	        
-	            if(structTy){
-			        errs() << '\n';
-			        auto size = structTy->getNumElements();
-			        auto &layout = M->getDataLayout();
-			        auto numBytes = layout.getTypeAllocSize(structTy);
-			        llvm::Value* index;
-			        if(inst->getNumOperands() > 2){
-			            index = inst->getOperand(2);
-			        }
-			        else{
-						index = inst->getOperand(1);
-			        }
-			        const llvm::StructLayout* structureLayout = layout.getStructLayout(structTy);
-			        auto constant = dyn_cast<ConstantInt>(index);
-			        if(constant){
-				    	auto intIndex = constant->getValue().getLimitedValue();
-				    	if(intIndex < size){
-							auto offset = structureLayout->getElementOffset(intIndex);
-						    if (!constant->isNegative() && !constant->uge(size)) {
-						        // print context
-						        bool first = true;
-						        for (Instruction *c_instr: ctxt) {
-						            if((c_instr) && (c_instr->getDebugLoc())){                    		                                                                                    
-						                if (first) {
-						                    first = false;
-						                    errs() << "Direct Use Site: ";
-						                    c_instr->getDebugLoc().print(errs());
-						                    errs() << "\n";
-						                }
-						                else {
-						                    errs() << "Indirect Use Site: ";
-						                    c_instr->getDebugLoc().print(errs());
-						                    errs() << "\n";
-						                }
-						            }
-						        }
-						        // print file name
-						        if (inst->getDebugLoc()){
-						        	errs() << "Definition Site: ";
-						        	inst->getDebugLoc().print(errs());
-						        	errs() << ", ";
-						        }
-						        // print fn name
-						        errs() << "In Func: " << function->getName().str() << ", ";
-						        //print line
-							    if (inst->getDebugLoc())
-							    	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
-							    else
-							    	errs() << "Dbg info corrupted!\n";
-						        //print buf bytes
-						        errs() << "Declared Size: " << numBytes << ", ";
-						        errs() << "Access Range: " << offset << '\n';
-						        if (numBytes >= offset)
-						        	errs() << "Classify this structure as safe!\n";
-						        else
-						        	errs() << "Classify this structure as unsafe!\n";
-						    }
-						}
-						else{
-							errs() << '\n'  << "Offset corrupted!" << '\n';
-							bool first = true;
-					        for (Instruction *c_instr: ctxt) {
-					            if((c_instr) && (c_instr->getDebugLoc())){                    		                                                                                    
-					                if (first) {
-					                    first = false;
-					                    errs() << "Direct Use Site: ";
-					                    c_instr->getDebugLoc().print(errs());
-					                    errs() << "\n";
-					                }
-					                else {
-					                    errs() << "Indirect Use Site: ";
-					                    c_instr->getDebugLoc().print(errs());
-					                    errs() << "\n";
-					                }
-					            }
-					        }
-					        if (inst->getDebugLoc()){
-					        	errs() << "Definition Site: ";
-					        	inst->getDebugLoc().print(errs());
-					        	errs() << ", ";
-					        }
-					        // print fn name
-					        errs() << "In Func: " << function->getName().str() << ", ";
-					        //print line
-						    if (inst->getDebugLoc())
-						    	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
-						    else
-						    	errs() << "Dbg info corrupted!\n";
-					        //print buf bytes
-					        errs() << "Declared Size: " << numBytes << ", ";
-					        errs() << "Access Range is corrupted since the index is corrupted!\n";
-					        errs() << "Classify this structure as unsafe!\n";
-						}
-					}
-					else {
-					    auto &rangeValue = state[index];
-					    if (rangeValue.isUnknown() ||
-					        rangeValue.isInfinity() ||
-					        rangeValue.lvalue->isNegative() ||
-					        rangeValue.rvalue->uge(size)) {
-					        // print context
-					        bool first = true;
-					        for (Instruction *c_instr: ctxt) {
-					            if ((c_instr) && (c_instr->getDebugLoc())) {             		                                                                                    
-					                if (first) {
-					                    first = false;
-					                    errs() << "Direct Use Site: ";
-					                    c_instr->getDebugLoc().print(errs());
-					                    errs() << "\n";
-					                }
-					                else {
-					                    errs() << "Indirect Use Site: ";
-					                    c_instr->getDebugLoc().print(errs());
-					                    errs() << "\n";
-					                }
-					            }
-					        }
-					        // print file name
-					        if (inst->getDebugLoc()){
-					        	errs() << "Definition Site: ";
-					        	inst->getDebugLoc().print(errs());
-					        	errs() << ", ";
-					        }
-					        // print fn name
-					        errs() << "In Func: " << function->getName().str() << ", ";
-					        //print line
-					        if (inst->getDebugLoc())
-					        	errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
-					        else
-					        	errs() << "Dbg info corrupted!\n";
-					        //print buf bytes
-					        errs() << "Declared Size: " << numBytes << ", ";
-					        if (rangeValue.isInfinity() || rangeValue.isUnknown()) {
-					            errs() << "Access Range cannot be determined " << "since GEP has non-constant offset operand!\n";
-					            errs() << "Classify this structure as unsafe!\n";
-					        }
-						}
-					}			
-				}
-			}
-		}
-	}
+                auto &state = analysis::getIncomingState(rangeStates, *inst);
+                Type *type = cast<PointerType>(cast<GetElementPtrInst>(inst)->getPointerOperandType())->getElementType();
+                auto arrayTy = dyn_cast_or_null<ArrayType>(type);
+                auto structTy = dyn_cast_or_null<StructType>(type);
+                
+                if(!arrayTy && !structTy){
+                    errs() << "\nThis is a pointer to type: "<< *type << '\n';
+                    // print context
+                    for (Instruction *c_instr: ctxt) {
+                        if ((c_instr) && (c_instr->getDebugLoc())) {
+                            errs() << "Call Site: ";
+                            errs() << *c_instr << '\n';
+                            //TODO: Call site rewrited by NesCheck, print instruction instead
+                            //c_instr->getDebugLoc().print(errs());
+                            //errs() << "\n";
+                        }
+                    }
+                    if (inst->getDebugLoc()){
+                        errs() << "Definition Site: ";
+                        inst->getDebugLoc().print(errs());
+                        errs() << ", ";
+                    }
+                    // print fn name
+                    errs() << "In Func: " << function->getName().str() << ", ";
+                    //print line
+                    if (inst->getDebugLoc())
+                        errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
+                    else
+                        errs() << "Dbg info corrupted!\n";
+                    errs() << "Classify this pointer as safe!\n";
+                }
+
+                if(arrayTy){
+                    errs() << '\n';
+                    auto size = arrayTy->getNumElements();
+                    auto elmtTy = arrayTy->getElementType();
+                    auto &layout = M->getDataLayout();
+                    auto numBytes = layout.getTypeAllocSize(arrayTy);
+                    auto elmtBytes = layout.getTypeAllocSize(elmtTy);
+                    auto index = inst->getOperand(2);
+                    auto constant = dyn_cast<ConstantInt>(index);
+                    if (constant) {
+                        if (!constant->isNegative() && !constant->uge(size)) {
+                            // print context
+                            bool first = true;
+                            for (Instruction *c_instr: ctxt) {
+                                if ((c_instr) && (c_instr->getDebugLoc())) {
+                                    if (first) {
+                                        first = false;
+                                        errs() << "Direct Use Site: ";
+                                        c_instr->getDebugLoc().print(errs());
+                                        errs() << "\n";
+                                    }
+                                    else {
+                                        errs() << "Indirect Use Site: ";
+                                        c_instr->getDebugLoc().print(errs());
+                                        errs() << "\n";
+                                    }
+                                }
+                            }
+                            // print file name
+                            if (inst->getDebugLoc()){
+                                errs() << "Definition Site: ";
+                                inst->getDebugLoc().print(errs());
+                                errs() << ", ";
+                            }
+                            // print fn name
+                            errs() << "In Func: " << function->getName().str() << ", ";
+                            //print line
+                            if (inst->getDebugLoc())
+                                errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
+                            else
+                                errs() << "Dbg info corrupted!\n";
+                            //print buf bytes
+                            errs() << "Declared Size: " << numBytes << ", ";
+                            //print indices
+                            errs() << "Access Range: " << (int64_t) constant->getValue().getLimitedValue() * elmtBytes << '\n';
+                            if (numBytes >= ((int64_t) constant->getValue().getLimitedValue() * elmtBytes))
+                                errs() << "Classify this array as safe!\n";
+                            else{
+                                errs() << "Classify this array as unsafe!\n";
+                                unsafePtr.insert(inst);
+                            }
+                        }
+                    }
+                    else {
+                        auto &rangeValue = state[index];
+                        if (rangeValue.isUnknown() ||
+                            rangeValue.isInfinity() ||
+                            rangeValue.lvalue->isNegative() ||
+                            rangeValue.rvalue->uge(size)) {
+                            // print context
+                            bool first = true;
+                            for (Instruction *c_instr: ctxt) {
+                                if ((c_instr) && (c_instr->getDebugLoc())) {
+                                    if (first) {
+                                        first = false;
+                                        errs() << "Direct Use Site: ";
+                                        c_instr->getDebugLoc().print(errs());
+                                        errs() << "\n";
+                                    }
+                                    else {
+                                        errs() << "Indirect Use Site: ";
+                                        c_instr->getDebugLoc().print(errs());
+                                        errs() << "\n";
+                                    }
+                                }
+                            }
+                            // print file name
+                            if (inst->getDebugLoc()){
+                                errs() << "Definition Site: ";
+                                inst->getDebugLoc().print(errs());
+                                errs() << ", ";
+                            }
+                            // print fn name
+                            errs() << "In Func: " << function->getName().str() << ", ";
+                            //print line
+                            if (inst->getDebugLoc())
+                                errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
+                            else
+                                errs() << "Dbg info corrupted!\n";
+                            //print buf bytes
+                            errs() << "Declared Size: " << numBytes << ", ";
+                            if (rangeValue.isInfinity() || rangeValue.isUnknown()) {
+                                errs() << "Access Range cannot be determined since GEP has non-constant offset operand!\n";
+                                errs() << "Classify this array as unsafe!\n";
+                                unsafePtr.insert(inst);
+                            }
+                            else {
+                                auto l = (int64_t) rangeValue.lvalue->getLimitedValue();
+                                auto r = (int64_t) rangeValue.rvalue->getLimitedValue();
+                                if (l < 0 || r < 0){
+                                    errs() << "Access Range is negative! Could be an unconditional bug!\n";
+                                    errs() << "Classify this array as unsafe!\n";
+                                    unsafePtr.insert(inst);
+                                }
+                                errs() << "Classify this array as safe!\n";
+                                errs() << l * (int64_t) elmtBytes << ':' << r * (int64_t) elmtBytes << '\n';
+                            }
+                        }
+                    }
+                }
+            
+                if(structTy){
+                    errs() << '\n';
+                    auto size = structTy->getNumElements();
+                    auto &layout = M->getDataLayout();
+                    auto numBytes = layout.getTypeAllocSize(structTy);
+                    llvm::Value* index;
+                    if(inst->getNumOperands() > 2){
+                        index = inst->getOperand(2);
+                    }
+                    else{
+                        index = inst->getOperand(1);
+                    }
+                    const llvm::StructLayout* structureLayout = layout.getStructLayout(structTy);
+                    auto constant = dyn_cast<ConstantInt>(index);
+                    if(constant){
+                        auto intIndex = constant->getValue().getLimitedValue();
+                        if(intIndex < size){
+                            auto offset = structureLayout->getElementOffset(intIndex);
+                            if (!constant->isNegative() && !constant->uge(size)) {
+                                // print context
+                                bool first = true;
+                                for (Instruction *c_instr: ctxt) {
+                                    if((c_instr) && (c_instr->getDebugLoc())){
+                                        if (first) {
+                                            first = false;
+                                            errs() << "Direct Use Site: ";
+                                            c_instr->getDebugLoc().print(errs());
+                                            errs() << "\n";
+                                        }
+                                        else {
+                                            errs() << "Indirect Use Site: ";
+                                            c_instr->getDebugLoc().print(errs());
+                                            errs() << "\n";
+                                        }
+                                    }
+                                }
+                                // print file name
+                                if (inst->getDebugLoc()){
+                                    errs() << "Definition Site: ";
+                                    inst->getDebugLoc().print(errs());
+                                    errs() << ", ";
+                                }
+                                // print fn name
+                                errs() << "In Func: " << function->getName().str() << ", ";
+                                //print line
+                                if (inst->getDebugLoc())
+                                    errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
+                                else
+                                    errs() << "Dbg info corrupted!\n";
+                                //print buf bytes
+                                errs() << "Declared Size: " << numBytes << ", ";
+                                errs() << "Access Range: " << offset << '\n';
+                                if (numBytes >= offset)
+                                    errs() << "Classify this structure as safe!\n";
+                                else{
+                                    errs() << "Classify this structure as unsafe!\n";
+                                    unsafePtr.insert(inst);
+                                }
+                            }
+                        }
+                        else{
+                            errs() << '\n'  << "Offset corrupted!" << '\n';
+                            bool first = true;
+                            for (Instruction *c_instr: ctxt) {
+                                if((c_instr) && (c_instr->getDebugLoc())){
+                                    if (first) {
+                                        first = false;
+                                        errs() << "Direct Use Site: ";
+                                        c_instr->getDebugLoc().print(errs());
+                                        errs() << "\n";
+                                    }
+                                    else {
+                                        errs() << "Indirect Use Site: ";
+                                        c_instr->getDebugLoc().print(errs());
+                                        errs() << "\n";
+                                    }
+                                }
+                            }
+                            if (inst->getDebugLoc()){
+                                errs() << "Definition Site: ";
+                                inst->getDebugLoc().print(errs());
+                                errs() << ", ";
+                            }
+                            // print fn name
+                            errs() << "In Func: " << function->getName().str() << ", ";
+                            //print line
+                            if (inst->getDebugLoc())
+                                errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
+                            else
+                                errs() << "Dbg info corrupted!\n";
+                            //print buf bytes
+                            errs() << "Declared Size: " << numBytes << ", ";
+                            errs() << "Access Range is corrupted since the index is corrupted!\n";
+                            errs() << "Classify this structure as unsafe!\n";
+                            unsafePtr.insert(inst);
+                        }
+                    }
+                    else {
+                        auto &rangeValue = state[index];
+                        if (rangeValue.isUnknown() ||
+                            rangeValue.isInfinity() ||
+                            rangeValue.lvalue->isNegative() ||
+                            rangeValue.rvalue->uge(size)) {
+                            // print context
+                            bool first = true;
+                            for (Instruction *c_instr: ctxt) {
+                                if ((c_instr) && (c_instr->getDebugLoc())) {
+                                    if (first) {
+                                        first = false;
+                                        errs() << "Direct Use Site: ";
+                                        c_instr->getDebugLoc().print(errs());
+                                        errs() << "\n";
+                                    }
+                                    else {
+                                        errs() << "Indirect Use Site: ";
+                                        c_instr->getDebugLoc().print(errs());
+                                        errs() << "\n";
+                                    }
+                                }
+                            }
+                            // print file name
+                            if (inst->getDebugLoc()){
+                                errs() << "Definition Site: ";
+                                inst->getDebugLoc().print(errs());
+                                errs() << ", ";
+                            }
+                            // print fn name
+                            errs() << "In Func: " << function->getName().str() << ", ";
+                            //print line
+                            if (inst->getDebugLoc())
+                                errs() << "At Line: " << inst->getDebugLoc().getLine() << '\n';
+                            else
+                                errs() << "Dbg info corrupted!\n";
+                            //print buf bytes
+                            errs() << "Declared Size: " << numBytes << ", ";
+                            if (rangeValue.isInfinity() || rangeValue.isUnknown()) {
+                                errs() << "Access Range cannot be determined " << "since GEP has non-constant offset operand!\n";
+                                errs() << "Classify this structure as unsafe!\n";
+                                unsafePtr.insert(inst);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    std::set <llvm::Instruction *> finalUnsafePtr;
+    errs() << "CCured analysis found: " << stackSeqPointerSet.size() << " unsafe pointers!\n";
+    errs() << "Value range analysis found: " << unsafePtr.size() << " unsafe pointers!\n";
+    
+    for(auto unsafe_inst_it: unsafePtr){
+        auto *GEPInst = dyn_cast<GetElementPtrInst>(&*unsafe_inst_it);
+        if(stackSeqPointerSet.find(GEPInst->getPointerOperand()) != stackSeqPointerSet.end())
+            finalUnsafePtr.insert(&*unsafe_inst_it);
+    }
+    errs() << "CCured + Value range analysis found: " << finalUnsafePtr.size() << " unsafe pointers!\n\n\n\n\n\n";
 }
+
+
