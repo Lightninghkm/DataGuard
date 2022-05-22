@@ -247,7 +247,7 @@ namespace
 				errs() << "\tManual Size is " << *size << "\n";
 			}
 
-		  return size;
+			return size;
 		}
 
 		Value *getOffsetForGEPInst(GetElementPtrInst *GEPInstr)
@@ -436,8 +436,8 @@ namespace
 			{
 				if (GlobalVariable *GV = dyn_cast<GlobalVariable>(U))
 				{
-			  		//                errs() << "Global Variable - " << *GV << "\n";
-			  		TheState.Variables[GV].dependentFunctions.insert(TheState.Variables[GV].dependentFunctions.begin(), (I->getFunction()->getName()));
+					//                errs() << "Global Variable - " << *GV << "\n";
+					TheState.Variables[GV].dependentFunctions.insert(TheState.Variables[GV].dependentFunctions.begin(), (I->getFunction()->getName()));
 				}
 				//              For the edge cases where a gep instruction is another instruction's operand
 				//              GEP Instruction isn't relevant to definition of a DYN pointer but it is relevant to SEQ
@@ -466,8 +466,8 @@ namespace
 				if (isArray)
 					errs() << " array[" << *(II->getArraySize()) << "]";
 				errs() << " (" << *(II->getAllocatedType()) << ") "
-					   << "}"
-					   << "" << NORMAL << "\n";
+						<< "}"
+						<< "" << NORMAL << "\n";
 
 				if (II->getAllocatedType()->isPointerTy())
 				{
@@ -1184,8 +1184,8 @@ namespace
 				errs() << "****  lookupMetadataTableEntry not linked ****** " << '\n';
 
 				lookupMetadataFunction = cast<Function>(CurrentModule->getOrInsertFunction("lookupMetadataTableEntry",
-									                                                       /*ret type*/ IntegerType::getInt64Ty(CurrentModule->getContext()),
-									                                                       /*args*/ IntegerType::getInt64Ty(CurrentModule->getContext()))
+															/*ret type*/ IntegerType::getInt64Ty(CurrentModule->getContext()),
+															/*args*/ IntegerType::getInt64Ty(CurrentModule->getContext()))
 									                        .getCallee());
 			}
 
@@ -1195,10 +1195,10 @@ namespace
 
 				//Create function call without linking
 				setMetadataFunction = cast<Function>(CurrentModule->getOrInsertFunction("setMetadataTableEntry",
-												                                        /*ret type*/ Type::getVoidTy(CurrentModule->getContext()),
-												                                        /*args*/ IntegerType::getInt64Ty(CurrentModule->getContext()),
-												                                        IntegerType::getInt64Ty(CurrentModule->getContext()),
-												                                        IntegerType::getInt64Ty(CurrentModule->getContext()))
+												         /*ret type*/ Type::getVoidTy(CurrentModule->getContext()),
+												         /*args*/ IntegerType::getInt64Ty(CurrentModule->getContext()),
+												         IntegerType::getInt64Ty(CurrentModule->getContext()),
+												         IntegerType::getInt64Ty(CurrentModule->getContext()))
 												         .getCallee());
 			}
 
@@ -1423,8 +1423,7 @@ namespace
 			AU.addRequired<TargetLibraryInfoWrapperPass>();
 			AU.addRequired<pdg::ProgramDependencyGraph>();
 		}
-    
-    
+		
 		//Currently we only care about unsafe stack pointer and unsafe heap pointers (decl on stack but point to heap)
 		void identifyDifferentKindsOfUnsafePointers() {
 			std::string instruction_string, function_name = "NULL";
@@ -1462,81 +1461,79 @@ namespace
 				 it != TheState.Variables.end(); it++) {
 				isUnsafeStackPointer = false;
 				if (it->second.classification == NesCheck::VariableStates::Dyn ||
-				    it->second.classification == NesCheck::VariableStates::Seq) {
-				    instruction = dyn_cast_or_null<Instruction>(it->first);
-				    isUnsafeStackPointer = true;
-				    //errs() << BLUE << "Checking whether unsafe pointer is on the stack " << NORMAL << "\n";
-				    //Consider only unsafe stack  pointers
-				    if (instruction) {
-				        errs() << i << ".Instruction " << *(it->first) << "\n";
-				        noOperands = instruction->getNumOperands();
-				        errs() << "\t # operands:" << noOperands << "\n";
-				        TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(*(instruction->getFunction()));
-				        for (int j = 0; j < noOperands; j++) {
-				            errs() << "\t Operand " << (j + 1) << " -" << *(instruction->getOperand(j)) << "\n";
-				            if (isAllocationFn(instruction->getOperand(j), TLI) ||
-				                isa<GlobalVariable>(instruction->getOperand(j))) {
-				                isUnsafeStackPointer = false;
-				                errs() << "\t Operand is mallocd or global variable" << "\n";
-				                //errs() << BLUE << "It is unsafe pointer but related to heap or global! " << NORMAL << "\n";
-				                break;
-				            }
-				        }
-				        isUnsafeStackPointer = isUnsafeStackPointer && (!isAllocationFn(it->first, TLI));
+					it->second.classification == NesCheck::VariableStates::Seq) {
+					instruction = dyn_cast_or_null<Instruction>(it->first);
+					isUnsafeStackPointer = true;
+					//errs() << BLUE << "Checking whether unsafe pointer is on the stack " << NORMAL << "\n";
+					//Consider only unsafe stack  pointers
+					if (instruction) {
+						errs() << i << ".Instruction " << *(it->first) << "\n";
+						noOperands = instruction->getNumOperands();
+						errs() << "\t # operands:" << noOperands << "\n";
+						TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(*(instruction->getFunction()));
+						for (int j = 0; j < noOperands; j++) {
+							errs() << "\t Operand " << (j + 1) << " -" << *(instruction->getOperand(j)) << "\n";
+							if (isAllocationFn(instruction->getOperand(j), TLI) ||
+								isa<GlobalVariable>(instruction->getOperand(j))) {
+								isUnsafeStackPointer = false;
+								errs() << "\t Operand is mallocd or global variable" << "\n";
+								//errs() << BLUE << "It is unsafe pointer but related to heap or global! " << NORMAL << "\n";
+								break;
+							}
+						}
+						isUnsafeStackPointer = isUnsafeStackPointer && (!isAllocationFn(it->first, TLI));
 
-				        // This check is insufficient to decide if it is an unsafe stack pointer
+						// This check is insufficient to decide if it is an unsafe stack pointer
 
 
-				        if (isUnsafeStackPointer) {
-				            mayPointOutsideStack = false;
-				            // Step 1 - Check if still points to the stack (if the above check succeeded)
-				            if (!(ptaw._ander_pta->getPAG()->hasValueNode(instruction))){
-				            	//errs() << BLUE << "No SVF node! " << NORMAL << "\n";
-				                isUnsafeStackPointer = false;
-				            }
-				            else {
-				                nodeId = ptaw._ander_pta->getPAG()->getValueNode(instruction);
-				                pointsToInfo = ptaw._ander_pta->getPts(nodeId);
-				                //Iterate through the objects
-				                for (auto memObjID = pointsToInfo.begin(); memObjID != pointsToInfo.end(); memObjID++) {
-				                    // If any element in the points to set is not on the stack (Conservative)
-				                    if (!ptaw._ander_pta->getPAG()->getObject(*memObjID)->isStack()) {
-				                        mayPointOutsideStack = true;
-				                        //errs() << BLUE << "It is unsafe pointer but points to outside the stack! " << NORMAL << "\n";
-				                        break;
-				                    }
-				                }
-				                //errs() << BLUE << "It is an unsafe stack pointer! " << NORMAL << "\n";
-				                isUnsafeStackPointer = isUnsafeStackPointer && (!mayPointOutsideStack);
-				                unsafeStackPointerCount = unsafeStackPointerCount + isUnsafeStackPointer;
-				                llvm::Value* unsafePointer = const_cast<llvm::Value*>(it->first);
-				                unsafeStackPointerSet.insert(unsafePointer);
-				                if (it->second.classification == NesCheck::VariableStates::Seq){
-				                	stackSeqPointerCount = stackSeqPointerCount + isUnsafeStackPointer;
-				                	stackSeqPointerSet.insert(unsafePointer);
-				                }	
-				                if (it->second.classification == NesCheck::VariableStates::Dyn){
-				                	stackDynPointerCount = stackDynPointerCount + isUnsafeStackPointer;
-				                	stackDynPointerSet.insert(unsafePointer);
-				                }
-				            }
-				        }
-				        errs() << "\t (Is it an unsafe stack pointer)-" << isUnsafeStackPointer << "\n";
-
-				    } else {
-				        //How do we handle global variables?
-				        //TODO - Handle global variables later
-				        GV = dyn_cast_or_null<GlobalVariable>(it->first);
-				        if (GV != NULL)
-				            errs() << "It's a global variable-" << *(GV) << "-" << isUnsafeStackPointer << "\n";
-				        else
-				            errs() << "I-" << it->first << "-" << isUnsafeStackPointer << "\n";
-				        //It doesn't reside on the stack (global data section)
-				        isUnsafeStackPointer = false;
-				    }
-
-				    ++i;
-
+						if (isUnsafeStackPointer) {
+							mayPointOutsideStack = false;
+							// Step 1 - Check if still points to the stack (if the above check succeeded)
+							if (!(ptaw._ander_pta->getPAG()->hasValueNode(instruction))){
+								//errs() << BLUE << "No SVF node! " << NORMAL << "\n";
+								isUnsafeStackPointer = false;
+							}
+							else {
+								nodeId = ptaw._ander_pta->getPAG()->getValueNode(instruction);
+								pointsToInfo = ptaw._ander_pta->getPts(nodeId);
+								//Iterate through the objects
+								for (auto memObjID = pointsToInfo.begin(); memObjID != pointsToInfo.end(); memObjID++) {
+									// If any element in the points to set is not on the stack (Conservative)
+									if (!ptaw._ander_pta->getPAG()->getObject(*memObjID)->isStack()) {
+										mayPointOutsideStack = true;
+										//errs() << BLUE << "It is unsafe pointer but points to outside the stack! " << NORMAL << "\n";
+										break;
+									}
+								}
+								//errs() << BLUE << "It is an unsafe stack pointer! " << NORMAL << "\n";
+								isUnsafeStackPointer = isUnsafeStackPointer && (!mayPointOutsideStack);
+								unsafeStackPointerCount = unsafeStackPointerCount + isUnsafeStackPointer;
+								llvm::Value* unsafePointer = const_cast<llvm::Value*>(it->first);
+								unsafeStackPointerSet.insert(unsafePointer);
+								if (it->second.classification == NesCheck::VariableStates::Seq){
+									stackSeqPointerCount = stackSeqPointerCount + isUnsafeStackPointer;
+									stackSeqPointerSet.insert(unsafePointer);
+								}	
+								if (it->second.classification == NesCheck::VariableStates::Dyn){
+									stackDynPointerCount = stackDynPointerCount + isUnsafeStackPointer;
+									stackDynPointerSet.insert(unsafePointer);
+								}
+							}
+						}
+						errs() << "\t (Is it an unsafe stack pointer)-" << isUnsafeStackPointer << "\n";
+					}
+					else {
+						//How do we handle global variables?
+						//TODO - Handle global variables later
+						GV = dyn_cast_or_null<GlobalVariable>(it->first);
+						if (GV != NULL)
+							errs() << "It's a global variable-" << *(GV) << "-" << isUnsafeStackPointer << "\n";
+						else
+							errs() << "I-" << it->first << "-" << isUnsafeStackPointer << "\n";
+						//It doesn't reside on the stack (global data section)
+						isUnsafeStackPointer = false;
+					}
+					++i;
 				}
 			}
 
